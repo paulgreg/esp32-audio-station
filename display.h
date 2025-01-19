@@ -2,16 +2,18 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+// #include "font-roboto.h"
+// #define FONT_SMALL  &Roboto_Medium_12
+// #define FONT_MEDIUM &Roboto_Medium_14
+// #define FONT_BIG    &Roboto_Medium_16
 
-#include "font-roboto.h"
-#define FONT_SMALL  &Roboto_Medium_12
-#define FONT_MEDIUM &Roboto_Medium_14
-#define FONT_BIG    &Roboto_Medium_16
+#include "RobotoCondensedRegular_euro8pt8b.h"
+#include "RobotoCondensedRegular_euro9pt8b.h"
+#include "RobotoCondensedRegular_euro10pt8b.h"
 
-// #include "font-dejavu.h"
-// #define FONT_SMALL  &DejaVu_LGC_Sans_Mono_12
-// #define FONT_MEDIUM &DejaVu_LGC_Sans_Mono_14
-// #define FONT_BIG    &DejaVu_LGC_Sans_Mono_16
+#define FONT_SMALL  &RobotoCondensed_Regular8pt8b
+#define FONT_MEDIUM &RobotoCondensed_Regular9pt8b
+#define FONT_BIG    &RobotoCondensed_Regular10pt8b
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -36,7 +38,6 @@ void setupScreen() {
 }
 
 void displayText(const char* s) {
-  Serial.println(s);
   display.clearDisplay();
   display.setFont(FONT_BIG);
   display.setCursor(10, 20);
@@ -86,7 +87,7 @@ void displayData(const char* title, const char* song, unsigned int volume, bool 
   }
 
   display.setFont(FONT_SMALL);
-  display.setCursor(94, 62);
+  display.setCursor(90, 62);
   if (mute) {
     display.printf("  - %%");
   } else {

@@ -68,6 +68,7 @@ void setup() {
   Serial.println(bluetoothMode ? BLUETOOTH_NAME : "Web Radio");
 
   setupScreen();
+
   displayText(bluetoothMode ? BLUETOOTH_NAME : "Web Radio");
 
   delay(3000); // Wait for VS1053 and PAM8403 to power up
@@ -80,7 +81,6 @@ void setup() {
   }
 
   if (bluetoothMode) {
-    displayText(BLUETOOTH_NAME);
     a2dp_sink.set_stream_reader(read_data_stream, false);
     a2dp_sink.set_avrc_metadata_callback(avrc_metadata_callback);
     a2dp_sink.start(BLUETOOTH_NAME);
