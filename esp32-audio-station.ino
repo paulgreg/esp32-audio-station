@@ -217,6 +217,10 @@ void toggleSource() {
   } else {
     stream.stopSong();
   }
+  if (!volumeSaved) {
+    Serial.printf("!!! Save volume %i\n", volume);
+    preferences.putInt("volume", volume);
+  }
   preferences.putBool("bluetoothMode", !bluetoothMode);
   delay(250);
   ESP.restart();
