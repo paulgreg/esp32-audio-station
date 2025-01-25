@@ -1,6 +1,6 @@
 # esp32-audio-station
 
-An ESP32 bluetooth speaker and web radio, inspired by [KitchenRadio](https://github.com/jeroenlukas/KitchenRadio) 🙏 and my previous bluetooth and web radio projects.
+An ESP32 bluetooth speaker and web radio, inspired by [KitchenRadio](https://github.com/jeroenlukas/KitchenRadio) and my previous bluetooth and web radio projects. That project was made thanks too [CelliesProjects/ESP32_VS1053_Stream](https://github.com/CelliesProjects/ESP32_VS1053_Stream) and [ESP32-A2DP](https://github.com/pschatzmann/ESP32-A2DP) libraries ! 🙏 
 
 
 ## Features
@@ -60,11 +60,11 @@ Note : some VS1053 board aren't able to decode aac streams. You can usually find
 
 ## Librairies
 
-- [paulgreg/ESP32_VS1053_Stream_raw](https://github.com/paulgreg/ESP32_VS1053_Stream_raw), I’ve forked [CelliesProjects/ESP32_VS1053_Stream](https://github.com/CelliesProjects/ESP32_VS1053_Stream) to expose `playChunk`
+- [paulgreg/ESP32_VS1053_Stream_raw](https://github.com/paulgreg/ESP32_VS1053_Stream_raw), forked from [CelliesProjects/ESP32_VS1053_Stream](https://github.com/CelliesProjects/ESP32_VS1053_Stream) to expose `playChunk`
 - [ESP32-A2DP](https://github.com/pschatzmann/ESP32-A2DP.git)
 - IRRemote
 
- `cd Arduino/libraries && git clone https//github.com/paulgreg/ESP32_VS1053_Stream_raw.git)`
+ `cd Arduino/libraries && git clone -b expose-play-chunk https//github.com/paulgreg/ESP32_VS1053_Stream_raw.git)`
 
 
 ## Flash
