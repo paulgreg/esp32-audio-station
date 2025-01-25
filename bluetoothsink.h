@@ -2,7 +2,7 @@ bool f_bluetoothsink_metadata_received = false;
 
 cbuf circBuffer(1024 * 24);
 
-#define BUFFSIZE 32 
+#define BUFFSIZE 32
 uint8_t mp3buff[BUFFSIZE];
 
 unsigned char bt_wav_header[44] = {
@@ -39,7 +39,6 @@ void handle_stream(ESP32_VS1053_Stream_raw *stream) {
       if (bytesRead != BUFFSIZE) Serial.printf("Only read %d bytes from  circular buffer\n", bytesRead);
       
       stream->playChunk(mp3buff, bytesRead); // Actually send the data to the VS1053
-    //}
   }
 }
 
@@ -47,7 +46,6 @@ void read_data_stream(const uint8_t *data, uint32_t length) {
   if (circBuffer.room() > length) { // If we get -1 here it means nothing could be read from the stream
     if (length > 0) { // Add them to the circular buffer
       circBuffer.write((char *)data, length); // length seems to be 4096 every time
-      // Serial.printf("\nRead %lu bytes", length);
     }
   } else {
     Serial.println("\nNothing to read from the stream");

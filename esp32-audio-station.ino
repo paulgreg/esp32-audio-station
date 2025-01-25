@@ -41,7 +41,6 @@ bool mute = false;
 bool eof = false;
 bool paused = false;
 
-bool initialized = false;
 bool bluetoothMode = true;
 
 boolean fetchWebRadiosData() {
@@ -68,7 +67,6 @@ void setup() {
   Serial.println(bluetoothMode ? BLUETOOTH_NAME : "Web Radio");
 
   setupScreen();
-
   displayText(bluetoothMode ? BLUETOOTH_NAME : "Web Radio");
 
   delay(3000); // Wait for VS1053 and PAM8403 to power up
@@ -79,31 +77,31 @@ void setup() {
     Serial.println("Decoder not running");
     while (1) delay(1000);
   }
+  stream.setVolume(volume);
 
   if (bluetoothMode) {
+    copyString(BLUETOOTH_NAME, titleLabel);
     a2dp_sink.set_stream_reader(read_data_stream, false);
     a2dp_sink.set_avrc_metadata_callback(avrc_metadata_callback);
     a2dp_sink.start(BLUETOOTH_NAME);
     delay(100);
     circBuffer.write((char *)bt_wav_header, 44);
     delay(100);
-    paused = false;
-    initialized = true;
   } else {
     displayText("Radio > Wifi");
     if (!connectToWifi()) {
       displayError("Wifi error");
-      delay(1000);
+      delay(10000);
+      toggleSource();
     } else {
       displayText("Radio > list");
       if (fetchWebRadiosData()) {
         radioIdx = radioIdx < webRadios.max ? radioIdx : 0;
-        stream.setVolume(volume);
         startRadio();
-        initialized = true;
       } else {
         displayError("Radio : error");
-        delay(1000);
+        delay(10000);
+        toggleSource();
       }
     }
   }
@@ -129,6 +127,7 @@ void loop() {
 
 void handleIRCommands() {
  if (hasTimePassed(IR_DELAY) && IrReceiver.decode()) {
+    lastAction = millis();
     uint16_t command = IrReceiver.decodedIRData.command;
     Serial.printf("IRcommand: %02x\n", command);
     switch (command) {
@@ -199,7 +198,6 @@ void changeRadioIndex(bool next) {
   copyString("", songLabel);
   refreshDisplay();
   hasRadioIdxChanged = true;
-  lastAction = millis();
 }
 
 void toggleMute() {
@@ -232,7 +230,6 @@ void changeVolume(bool increase) {
     if (increase && volume <= (VOLUME_MAX - VOLUME_STEP)) volume += VOLUME_STEP;
     else if (!increase && volume >= VOLUME_STEP) volume -= VOLUME_STEP;
     volumeSaved = false;
-    lastAction = millis();
     stream.setVolume(volume);
     refreshDisplay();
   }
@@ -242,7 +239,6 @@ void changeRadio () {
   if (hasRadioIdxChanged && hasTimePassed(CHANGE_RADIO_DELAY)) {
     hasRadioIdxChanged = false;
     radioIdxSaved = false;
-    lastAction = millis();
     startRadio();
   }
 }
