@@ -59,9 +59,9 @@ char titleBuffer[255];
 char songBuffer[255];
 
 void displayData(const char* title, const char* song, unsigned int volume, bool mute, bool eof) {
-  Serial.printf("radio « %s », song « %s », vol: %i, mute: %i, eof: %i\n", title, song, volume, mute, eof);
+  Serial.printf("title « %s », song « %s », vol: %i, mute: %i, eof: %i\n", title, song, volume, mute, eof);
 
-  formatString(title, titleBuffer, RADIO_LEN_LIMIT);
+  formatString(title, titleBuffer, TITLE_LEN_LIMIT);
   formatString(song, songBuffer, SONG_LEN_LIMIT);
 
   display.clearDisplay();
@@ -72,11 +72,11 @@ void displayData(const char* title, const char* song, unsigned int volume, bool 
     display.setFont();
     display.setCursor(0, 35);
     display.print("Stream error");
-  } else if (strlen(song) == 0) { // only radio name
+  } else if (strlen(song) == 0) { // only title name
     display.setFont(FONT_BIG);
     display.setCursor(0, 25);
     display.print(titleBuffer);
-  } else { // with radio and song
+  } else { // with title and song
     display.setFont();
     display.setFont(FONT_MEDIUM);
     display.setCursor(0, 12);
