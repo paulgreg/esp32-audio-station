@@ -180,14 +180,14 @@ void startRadio() {
   copyString("", songLabel);
   eof = false;
   refreshDisplay();
-  stream.connecttohost(webRadios.url[radioIdx]);
-  Serial.printf("codec: %s - bitrate: %lu kbps\n", stream.currentCodec(), stream.bitrate());
+  stream.connectToHost(webRadios.url[radioIdx]);
+  // Serial.printf("codec: %s - bitrate: %lu kbps\n", stream.currentCodec(), stream.bitrate());
 }
 
 void restartRadio() {
   Serial.printf("RestartRadio %s - %s\n", webRadios.url[radioIdx], webRadios.name[radioIdx]);
   eof = false;
-  stream.connecttohost(webRadios.url[radioIdx]);
+  stream.connectToHost(webRadios.url[radioIdx]);
 }
 
 void changeRadioIndex(bool next) {
