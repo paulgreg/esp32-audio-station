@@ -31,6 +31,7 @@ BluetoothA2DPSink a2dp_sink;
 WebRadios webRadios;
 
 unsigned long lastAction = millis();
+unsigned long lastIRTime = 0;
 
 unsigned short radioIdx = 0;
 bool hasRadioIdxChanged = false;
@@ -126,51 +127,55 @@ void loop() {
 }
 
 void handleIRCommands() {
- if (hasTimePassed(IR_DELAY) && IrReceiver.decode()) {
-    lastAction = millis();
-    uint16_t command = IrReceiver.decodedIRData.command;
-    Serial.printf("IRcommand: %02x\n", command);
-    switch (command) {
-      case IR_PAUSE:
-        if (bluetoothMode) {
-          if (paused) {
-            a2dp_sink.play();
-          } else {
-            a2dp_sink.pause();
+  if (IrReceiver.decode()) {
+    bool isRepeat = IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT;
+    if (!isRepeat && millis() - lastIRTime >= IR_DELAY) {
+      lastIRTime = millis();
+      lastAction = millis();
+      uint16_t command = IrReceiver.decodedIRData.command;
+      Serial.printf("IRcommand: %02x\n", command);
+      switch (command) {
+        case IR_PAUSE:
+          if (bluetoothMode) {
+            if (paused) {
+              a2dp_sink.play();
+            } else {
+              a2dp_sink.pause();
+            }
+            paused = !paused;
           }
-          paused = !paused;
-        }
-        break;
-      case IR_NEXT:
-        if (bluetoothMode) {
-          a2dp_sink.next();
-        } else {
-          changeRadioIndex(true);
-        }
-        break;
-      case IR_PREVIOUS:
-        if (bluetoothMode) {
-          a2dp_sink.previous();
-        } else {
-          changeRadioIndex(false);
-        }
-        break;
-      case IR_VOL_UP: 
-        changeVolume(true);
-        break;
-      case IR_VOL_DOWN:
-        changeVolume(false);
-        break;
-      case IR_VOL_MUTE:
-        toggleMute();
-        break;
-      case IR_VOL_SOURCE:
-        toggleSource();
-        break;
-      default:	
-        Serial.println("IRCommand: unknown");
+          break;
+        case IR_NEXT:
+          if (bluetoothMode) {
+            a2dp_sink.next();
+          } else {
+            changeRadioIndex(true);
+          }
+          break;
+        case IR_PREVIOUS:
+          if (bluetoothMode) {
+            a2dp_sink.previous();
+          } else {
+            changeRadioIndex(false);
+          }
+          break;
+        case IR_VOL_UP: 
+          changeVolume(true);
+          break;
+        case IR_VOL_DOWN:
+          changeVolume(false);
+          break;
+        case IR_VOL_MUTE:
+          toggleMute();
+          break;
+        case IR_VOL_SOURCE:
+          toggleSource();
+          break;
+        default:	
+          Serial.println("IRCommand: unknown");
+      }
     }
-		IrReceiver.resume();
+    IrReceiver.resume();
   }
 }
 
