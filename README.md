@@ -60,11 +60,11 @@ Note : some VS1053 board aren't able to decode aac streams. You can usually find
 
 ## Librairies
 
-- [paulgreg/ESP32_VS1053_Stream_raw](https://github.com/paulgreg/ESP32_VS1053_Stream_raw), forked from [CelliesProjects/ESP32_VS1053_Stream](https://github.com/CelliesProjects/ESP32_VS1053_Stream) to expose `playChunk`
+- [CelliesProjects/ESP32_VS1053_Stream](https://github.com/CelliesProjects/ESP32_VS1053_Stream) (now includes `playChunk` support)
 - [ESP32-A2DP](https://github.com/pschatzmann/ESP32-A2DP.git)
 - IRRemote
 
- `cd Arduino/libraries && git clone -b expose-play-chunk https//github.com/paulgreg/ESP32_VS1053_Stream_raw.git)`
+ `cd Arduino/libraries && git clone https://github.com/CelliesProjects/ESP32_VS1053_Stream.git`
 
 
 ## Flash

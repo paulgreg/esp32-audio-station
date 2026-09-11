@@ -31,14 +31,14 @@ void avrc_metadata_callback(uint8_t data1, const uint8_t *data2) {
     }
 }
 
-void handle_stream(ESP32_VS1053_Stream_raw *stream) {
+void handle_stream(ESP32_VS1053_Stream *stream) {
   if (circBuffer.available()) { 
       int bytesRead = circBuffer.read((char *)mp3buff, BUFFSIZE);
       
       // If we didn't read the full 32 bytes, that's a worry
       if (bytesRead != BUFFSIZE) Serial.printf("Only read %d bytes from  circular buffer\n", bytesRead);
       
-      stream->playChunk(mp3buff, bytesRead); // Actually send the data to the VS1053
+      stream->playChunk(mp3buff, bytesRead, false); // Actually send the data to the VS1053
   }
 }
 

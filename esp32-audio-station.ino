@@ -10,7 +10,7 @@
 #include <VS1053.h>
 
 // Player with web radio stream handling
-#include <ESP32_VS1053_Stream_raw.h>
+#include <ESP32_VS1053_Stream.h>
 
 // bluetooth
 #include "BluetoothA2DPSink.h"
@@ -24,7 +24,7 @@
 #include "network.h"
 
 Preferences preferences;
-ESP32_VS1053_Stream_raw stream;
+ESP32_VS1053_Stream stream;
 
 BluetoothA2DPSink a2dp_sink;
 
@@ -79,6 +79,9 @@ void setup() {
     while (1) delay(1000);
   }
   stream.setVolume(volume);
+  stream.setStationCB(audio_showstation);
+  stream.setInfoCB(audio_showstreamtitle);
+  stream.setEofCB(audio_eof_stream);
 
   if (bluetoothMode) {
     copyString(BLUETOOTH_NAME, titleLabel);
