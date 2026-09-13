@@ -8,7 +8,7 @@ An ESP32 bluetooth speaker and web radio, inspired by [KitchenRadio](https://git
 - mp3 and aac decoding (depends on VS1053 module)
 - OLED screen displaying radio, songs, volume
 - fetch radios from a JSON file (to easily update them)
-- song metadata for Radio France stations (FIP, France Inter, etc.) via the Radio France live metadata API
+- song metadata for Radio France stations (FIP, France Inter, etc.) via the Radio France live metadata API, fetched asynchronously on a separate FreeRTOS task (Core 0) to avoid audio glitches
 - IR remote (next / previous / volume + / volume - / mute / source)
 - configurable debug output and retry limits
 
@@ -65,7 +65,7 @@ Key parameters:
 
 ⚠️ Web Radios are fetched from a JSON file. You'll need to create a JSON file containing web radios name and URL and host it somewhere on the internet. See `radios` folder for exemple.
 
-Radio France stations (FIP, France Inter, etc.) don't embed song metadata in their audio streams. To display song titles for these stations, add an optional `radioFranceMetadataId` field to the JSON entry. The ESP32 will poll the [Radio France live metadata API](https://api.radiofrance.fr/livemeta/pull/) every ~15 seconds to fetch the current song title and artist. Stations without this field are not polled. `radios.json` example:
+Radio France stations (FIP, France Inter, etc.) don't embed song metadata in their audio streams. To display song titles for these stations, add an optional `radioFranceMetadataId` field to the JSON entry. The ESP32 polls the [Radio France live metadata API](https://api.radiofrance.fr/livemeta/pull/) every ~15 seconds to fetch the current song title and artist. This fetch runs on a **dedicated FreeRTOS task pinned to Core 0**, so the HTTPS request never blocks the audio streaming loop on Core 1. Stations without this field are not polled. `radios.json` example:
 
     [
       {"name":"Fip","url":"http://icecast.radiofrance.fr/fip-hifi.aac","radioFranceMetadataId":7},
@@ -108,7 +108,8 @@ Other libraries (`Adafruit_SSD1306`, `Adafruit_GFX`, `Arduino_JSON`) can be inst
 
 Flash using "ESP32 DEV Module" (or ESP32-WROOM-DA for my model)
 
-⚠️ You'll need to change partition layout to have enough flash size: NO OTA (2 MB APP/2 MB SPIFFS)
+⚠️  You'll need to change partition layout to have enough flash size: NO OTA (2 MB APP/2 MB SPIFFS)
+
 
 This is required because fetching Radio France song metadata uses HTTPS (`WiFiClientSecure`), which pulls in the TLS/mbedtls stack (~300-500 KB). The default partition scheme (1.2 MB APP + OTA) is not large enough. In the Arduino IDE, select **Tools > Partition Scheme > "NO OTA (2MB APP/2MB SPIFFS)"**. If using PlatformIO, add `board_build.partitions = no_ota.csv` to `platformio.ini`.
 

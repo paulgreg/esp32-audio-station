@@ -2,7 +2,16 @@
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
 
+#define METADATA_TASK_STACK_SIZE 8192
+#define METADATA_TASK_PRIORITY 1
+#define METADATA_TASK_CORE 0
+
 char lastMetadata[LABEL_BUFFER_SIZE];
+
+volatile bool f_metadata_ready = false;
+char metadataResult[LABEL_BUFFER_SIZE];
+int currentMetadataId = 0;
+TaskHandle_t metadataTaskHandle = NULL;
 
 bool fetchRadioFranceMetadata(int metadataId, char* buffer, size_t bufferSize) {
   char url[128];
@@ -14,7 +23,8 @@ bool fetchRadioFranceMetadata(int metadataId, char* buffer, size_t bufferSize) {
   client.setInsecure();
   HTTPClient http;
   http.begin(client, url);
-  http.setTimeout(5000);
+  http.setConnectTimeout(1000);
+  http.setTimeout(1500);
   int httpCode = http.GET();
 
   if (httpCode <= 0) {
@@ -86,4 +96,39 @@ bool fetchRadioFranceMetadata(int metadataId, char* buffer, size_t bufferSize) {
 
 void resetLastMetadata() {
   lastMetadata[0] = '\0';
+}
+
+void metadataTaskLoop(void *parameter) {
+  for (;;) {
+    if (currentMetadataId > 0) {
+      char buffer[LABEL_BUFFER_SIZE];
+      if (fetchRadioFranceMetadata(currentMetadataId, buffer, sizeof(buffer))) {
+        strncpy(metadataResult, buffer, sizeof(metadataResult) - 1);
+        metadataResult[sizeof(metadataResult) - 1] = '\0';
+        f_metadata_ready = true;
+      }
+    }
+    vTaskDelay(pdMS_TO_TICKS(METADATA_POLL_INTERVAL_MS));
+  }
+}
+
+void startMetadataTask() {
+  if (metadataTaskHandle == NULL) {
+    xTaskCreatePinnedToCore(
+      metadataTaskLoop,
+      "metadata",
+      METADATA_TASK_STACK_SIZE,
+      NULL,
+      METADATA_TASK_PRIORITY,
+      &metadataTaskHandle,
+      METADATA_TASK_CORE
+    );
+  }
+}
+
+void stopMetadataTask() {
+  if (metadataTaskHandle != NULL) {
+    vTaskDelete(metadataTaskHandle);
+    metadataTaskHandle = NULL;
+  }
 }

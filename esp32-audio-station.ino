@@ -29,7 +29,7 @@
 #define MODE_SWITCH_DELAY_MS 250
 #define ERROR_DISPLAY_DELAY_MS 10000
 #define EOF_RESTART_DELAY_MS 1000
-#define STREAM_LOOP_DELAY_MS 5
+#define STREAM_LOOP_DELAY_MS 1
 
 Preferences preferences;
 ESP32_VS1053_Stream stream;
@@ -52,8 +52,6 @@ bool paused = false;
 bool pendingRestart = false;
 
 bool bluetoothMode = true;
-
-unsigned long lastMetadataFetch = 0;
 
 bool fetchWebRadiosData() {
   for (int retry = 0; retry < MAX_RETRY; retry++) {
@@ -115,6 +113,7 @@ void setup() {
       if (fetchWebRadiosData()) {
         radioIdx = radioIdx < webRadios.max ? radioIdx : 0;
         startRadio();
+        startMetadataTask();
       } else {
         displayError("Radio : error");
         delay(ERROR_DISPLAY_DELAY_MS);
@@ -207,7 +206,8 @@ void startRadio() {
   copyString(webRadios.name[radioIdx], titleLabel, sizeof(titleLabel));
   copyString("", songLabel, sizeof(songLabel));
   resetLastMetadata();
-  lastMetadataFetch = 0;
+  f_metadata_ready = false;
+  currentMetadataId = webRadios.radioFranceMetadataId[radioIdx];
   eof = false;
   refreshDisplay();
   stream.connectToHost(webRadios.url[radioIdx]);
@@ -216,7 +216,8 @@ void startRadio() {
 void restartRadio() {
   Serial.printf("RestartRadio %s - %s\n", webRadios.url[radioIdx], webRadios.name[radioIdx]);
   resetLastMetadata();
-  lastMetadataFetch = 0;
+  f_metadata_ready = false;
+  currentMetadataId = webRadios.radioFranceMetadataId[radioIdx];
   eof = false;
   refreshDisplay();
   stream.connectToHost(webRadios.url[radioIdx]);
@@ -229,7 +230,8 @@ void changeRadioIndex(bool next) {
   copyString(webRadios.name[radioIdx], titleLabel, sizeof(titleLabel));
   copyString("", songLabel, sizeof(songLabel));
   resetLastMetadata();
-  lastMetadataFetch = 0;
+  f_metadata_ready = false;
+  currentMetadataId = 0;
   refreshDisplay();
   hasRadioIdxChanged = true;
 }
@@ -276,12 +278,12 @@ void changeRadio () {
 
 void pollRadioFranceMetadata() {
   int metadataId = webRadios.radioFranceMetadataId[radioIdx];
+  currentMetadataId = metadataId;
   if (metadataId <= 0) return;
-  if (millis() - lastMetadataFetch < METADATA_POLL_INTERVAL_MS) return;
-  lastMetadataFetch = millis();
-  char buffer[LABEL_BUFFER_SIZE];
-  if (fetchRadioFranceMetadata(metadataId, buffer, sizeof(buffer))) {
-    copyString(buffer, songLabel, sizeof(songLabel));
+
+  if (f_metadata_ready) {
+    f_metadata_ready = false;
+    copyString(metadataResult, songLabel, sizeof(songLabel));
     refreshDisplay();
   }
 }
