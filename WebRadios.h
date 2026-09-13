@@ -5,6 +5,7 @@ struct WebRadios {
   unsigned int max;
   char name[MAX_RADIOS][RADIO_NAME_SIZE];
   char url[MAX_RADIOS][RADIO_URL_SIZE];
+  int radioFranceMetadataId[MAX_RADIOS];
 };
 
 void fillWebRadiosFromJson(JSONVar json, WebRadios* webradios) {
@@ -13,6 +14,11 @@ void fillWebRadiosFromJson(JSONVar json, WebRadios* webradios) {
   for (int i = 0; i < count; i++) {
     snprintf(webradios->name[i], sizeof(webradios->name[i]), "%s", (const char*) json[i]["name"]);
     snprintf(webradios->url[i], sizeof(webradios->url[i]), "%s", (const char*) json[i]["url"]);
+    webradios->radioFranceMetadataId[i] = 0;
+    JSONVar metaVar = json[i]["radioFranceMetadataId"];
+    if (JSON.typeof(metaVar) != "undefined") {
+      webradios->radioFranceMetadataId[i] = (int)(double)metaVar;
+    }
   }
   webradios->max = count;
 }

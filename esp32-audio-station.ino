@@ -22,6 +22,7 @@
 #include <Arduino_JSON.h>
 #include "WebRadios.h"
 #include "network.h"
+#include "fipmetadata.h"
 
 #define STARTUP_DELAY_MS 3000
 #define BT_START_DELAY_MS 100
@@ -51,6 +52,8 @@ bool paused = false;
 bool pendingRestart = false;
 
 bool bluetoothMode = true;
+
+unsigned long lastMetadataFetch = 0;
 
 bool fetchWebRadiosData() {
   for (int retry = 0; retry < MAX_RETRY; retry++) {
@@ -136,6 +139,7 @@ void loop() {
     } else {
       if (stream.isRunning()) {
         stream.loop();
+        pollRadioFranceMetadata();
         delay(STREAM_LOOP_DELAY_MS);
       }
       changeRadio();
@@ -202,6 +206,8 @@ void startRadio() {
   Serial.printf("StartRadio %s - %s\n", webRadios.url[radioIdx], webRadios.name[radioIdx]);
   copyString(webRadios.name[radioIdx], titleLabel, sizeof(titleLabel));
   copyString("", songLabel, sizeof(songLabel));
+  resetLastMetadata();
+  lastMetadataFetch = 0;
   eof = false;
   refreshDisplay();
   stream.connectToHost(webRadios.url[radioIdx]);
@@ -209,6 +215,8 @@ void startRadio() {
 
 void restartRadio() {
   Serial.printf("RestartRadio %s - %s\n", webRadios.url[radioIdx], webRadios.name[radioIdx]);
+  resetLastMetadata();
+  lastMetadataFetch = 0;
   eof = false;
   refreshDisplay();
   stream.connectToHost(webRadios.url[radioIdx]);
@@ -220,6 +228,8 @@ void changeRadioIndex(bool next) {
   else radioIdx = radioIdx > 0 ? radioIdx - 1 : webRadios.max - 1;
   copyString(webRadios.name[radioIdx], titleLabel, sizeof(titleLabel));
   copyString("", songLabel, sizeof(songLabel));
+  resetLastMetadata();
+  lastMetadataFetch = 0;
   refreshDisplay();
   hasRadioIdxChanged = true;
 }
@@ -261,6 +271,18 @@ void changeRadio () {
     hasRadioIdxChanged = false;
     radioIdxSaved = false;
     startRadio();
+  }
+}
+
+void pollRadioFranceMetadata() {
+  int metadataId = webRadios.radioFranceMetadataId[radioIdx];
+  if (metadataId <= 0) return;
+  if (millis() - lastMetadataFetch < METADATA_POLL_INTERVAL_MS) return;
+  lastMetadataFetch = millis();
+  char buffer[LABEL_BUFFER_SIZE];
+  if (fetchRadioFranceMetadata(metadataId, buffer, sizeof(buffer))) {
+    copyString(buffer, songLabel, sizeof(songLabel));
+    refreshDisplay();
   }
 }
 
