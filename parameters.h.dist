@@ -8,11 +8,8 @@
 #define WEB_RADIO_USER    "username" // can be an empty string
 #define WEB_RADIO_PASSWD  "password" // can be an empty string
 
-#define RADIO_FRANCE_LIVEMETA_URL  "https://api.radiofrance.fr/livemeta/pull/"
 #define RETRIES_DELAY     5 * 1000
 #define MAX_RETRY         10
-
-#define METADATA_POLL_INTERVAL_MS  15 * 1000
 
 #define SPI_CLK_PIN     18
 #define SPI_MISO_PIN    19
@@ -24,7 +21,6 @@
 
 #define IR_RECEIVE_PIN  27
 
-#define IR_DELAY        500
 #define IR_PAUSE        0x40
 #define IR_NEXT         0x5
 #define IR_PREVIOUS     0x2
@@ -32,6 +28,8 @@
 #define IR_VOL_UP       0x1E
 #define IR_VOL_MUTE     0x16
 #define IR_VOL_SOURCE   0x54
+
+#define IR_DELAY        500
 
 #define VOLUME_MAX      100
 #define VOLUME_STEP     2

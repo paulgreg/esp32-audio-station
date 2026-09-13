@@ -22,7 +22,6 @@
 #include <Arduino_JSON.h>
 #include "WebRadios.h"
 #include "network.h"
-#include "fipmetadata.h"
 
 #define STARTUP_DELAY_MS 3000
 #define BT_START_DELAY_MS 100
@@ -113,7 +112,6 @@ void setup() {
       if (fetchWebRadiosData()) {
         radioIdx = radioIdx < webRadios.max ? radioIdx : 0;
         startRadio();
-        startMetadataTask();
       } else {
         displayError("Radio : error");
         delay(ERROR_DISPLAY_DELAY_MS);
@@ -138,7 +136,6 @@ void loop() {
     } else {
       if (stream.isRunning()) {
         stream.loop();
-        pollRadioFranceMetadata();
         delay(STREAM_LOOP_DELAY_MS);
       }
       changeRadio();
@@ -205,9 +202,6 @@ void startRadio() {
   Serial.printf("StartRadio %s - %s\n", webRadios.url[radioIdx], webRadios.name[radioIdx]);
   copyString(webRadios.name[radioIdx], titleLabel, sizeof(titleLabel));
   copyString("", songLabel, sizeof(songLabel));
-  resetLastMetadata();
-  f_metadata_ready = false;
-  currentMetadataId = webRadios.radioFranceMetadataId[radioIdx];
   eof = false;
   refreshDisplay();
   stream.connectToHost(webRadios.url[radioIdx]);
@@ -215,9 +209,6 @@ void startRadio() {
 
 void restartRadio() {
   Serial.printf("RestartRadio %s - %s\n", webRadios.url[radioIdx], webRadios.name[radioIdx]);
-  resetLastMetadata();
-  f_metadata_ready = false;
-  currentMetadataId = webRadios.radioFranceMetadataId[radioIdx];
   eof = false;
   refreshDisplay();
   stream.connectToHost(webRadios.url[radioIdx]);
@@ -229,9 +220,6 @@ void changeRadioIndex(bool next) {
   else radioIdx = radioIdx > 0 ? radioIdx - 1 : webRadios.max - 1;
   copyString(webRadios.name[radioIdx], titleLabel, sizeof(titleLabel));
   copyString("", songLabel, sizeof(songLabel));
-  resetLastMetadata();
-  f_metadata_ready = false;
-  currentMetadataId = 0;
   refreshDisplay();
   hasRadioIdxChanged = true;
 }
@@ -273,18 +261,6 @@ void changeRadio () {
     hasRadioIdxChanged = false;
     radioIdxSaved = false;
     startRadio();
-  }
-}
-
-void pollRadioFranceMetadata() {
-  int metadataId = webRadios.radioFranceMetadataId[radioIdx];
-  currentMetadataId = metadataId;
-  if (metadataId <= 0) return;
-
-  if (f_metadata_ready) {
-    f_metadata_ready = false;
-    copyString(metadataResult, songLabel, sizeof(songLabel));
-    refreshDisplay();
   }
 }
 
