@@ -2,12 +2,12 @@
 #define WIFI_PASSWORD   "wifi password"
 
 #define BLUETOOTH_NAME   "BluetoothSpeaker"
-#
 #define MAX_RADIOS        50
 #define WEB_RADIOS_URL    "https://example.com/radios.json"
 #define WEB_RADIO_USER    "username" // can be an empty string
 #define WEB_RADIO_PASSWD  "password" // can be an empty string
 #define RETRIES_DELAY     5 * 1000
+#define MAX_RETRY         10
 
 #define SPI_CLK_PIN     18
 #define SPI_MISO_PIN    19
@@ -18,6 +18,7 @@
 #define VS1053_DREQ     4
 
 #define IR_RECEIVE_PIN  27
+
 #define IR_DELAY        500
 #define IR_PAUSE        0x40
 #define IR_NEXT         0x5
@@ -30,8 +31,11 @@
 #define VOLUME_MAX      100
 #define VOLUME_STEP     2
 
-#define RADIO_LEN_LIMIT 16
+#define TITLE_LEN_LIMIT 16
 #define SONG_LEN_LIMIT  40
 
 #define CHANGE_RADIO_DELAY    1000
 #define SAVE_DELAY            10 * 1000
+
+// Set to true to enable verbose serial debug output (e.g. full JSON response)
+#define DEBUG               false

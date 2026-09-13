@@ -1,19 +1,21 @@
-boolean connectToWifi() {
+#define WIFI_CONNECT_TIMEOUT_MS 1000
+#define WIFI_CONNECT_RETRIES 100
+
+bool connectToWifi() {
   if (WiFi.status() == WL_CONNECTED) return true;
-  
+
   Serial.print("\nconnecting to ");
   Serial.println(WIFI_SSID);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   WiFi.setSleep(false);
-  // WiFi.setAutoConnect(true);
   WiFi.setAutoReconnect(true);
   WiFi.reconnect();
-  unsigned int retries = 100;
+  unsigned int retries = WIFI_CONNECT_RETRIES;
   while (WiFi.status() != WL_CONNECTED && (retries-- > 0)) {
     Serial.print(".");
-    delay(1000);
+    delay(WIFI_CONNECT_TIMEOUT_MS);
   }
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("\nWifi connection failed");
@@ -37,21 +39,23 @@ String httpGet(const char* url, const char* login, const char* password) {
     http.begin(url);
     if (strlen(login) > 0 && strlen(password) > 0) http.setAuthorization(login, password);
     int httpCode = http.GET();
-     Serial.print("HTTP code : "); Serial.println(httpCode);
+    Serial.print("HTTP code : "); Serial.println(httpCode);
     if (httpCode > 0) {
       s = http.getString();
       Serial.print("Reponse length : "); Serial.println(s.length());
+#ifdef DEBUG
       Serial.println(s);
+#endif
     } else {
       Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
     }
     http.end();
-  }  
+  }
   return s;
 }
 
-boolean getWebRadiosJSON(WebRadios* webRadios) {
-  boolean success = false;
+bool getWebRadiosJSON(WebRadios* webRadios) {
+  bool success = false;
   String data = httpGet(WEB_RADIOS_URL, WEB_RADIO_USER, WEB_RADIO_PASSWD);
   JSONVar json = JSON.parse(data);
   if (JSON.typeof(json) == "undefined") {

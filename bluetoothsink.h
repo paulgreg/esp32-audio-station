@@ -1,9 +1,11 @@
+#define CIRC_BUFFER_SIZE (1024 * 24)
+#define BT_AUDIO_BUFFSIZE 32
+
 bool f_bluetoothsink_metadata_received = false;
 
-cbuf circBuffer(1024 * 24);
+cbuf circBuffer(CIRC_BUFFER_SIZE);
 
-#define BUFFSIZE 32
-uint8_t mp3buff[BUFFSIZE];
+uint8_t mp3buff[BT_AUDIO_BUFFSIZE];
 
 unsigned char bt_wav_header[44] = {
     0x52, 0x49, 0x46, 0x46, // RIFF
@@ -25,29 +27,30 @@ void avrc_metadata_callback(uint8_t data1, const uint8_t *data2) {
     Serial.printf("AVRC metadata rsp: attribute id 0x%x, %s\n", data1, data2);
     if (data1 == 0x1) { // Title
         strncpy(songLabel, (char *)data2, sizeof(songLabel) - 1);
+        songLabel[sizeof(songLabel) - 1] = '\0';
     } else if (data1 == 0x2) {
         strncpy(titleLabel, (char *)data2, sizeof(titleLabel) - 1);
+        titleLabel[sizeof(titleLabel) - 1] = '\0';
         f_bluetoothsink_metadata_received = true;
     }
 }
 
 void handle_stream(ESP32_VS1053_Stream *stream) {
-  if (circBuffer.available()) { 
-      int bytesRead = circBuffer.read((char *)mp3buff, BUFFSIZE);
-      
-      // If we didn't read the full 32 bytes, that's a worry
-      if (bytesRead != BUFFSIZE) Serial.printf("Only read %d bytes from  circular buffer\n", bytesRead);
-      
-      stream->playChunk(mp3buff, bytesRead, false); // Actually send the data to the VS1053
+  if (circBuffer.available()) {
+      int bytesRead = circBuffer.read((char *)mp3buff, BT_AUDIO_BUFFSIZE);
+
+      if (bytesRead != BT_AUDIO_BUFFSIZE) Serial.printf("Only read %d bytes from circular buffer\n", bytesRead);
+
+      stream->playChunk(mp3buff, bytesRead, false);
   }
 }
 
 void read_data_stream(const uint8_t *data, uint32_t length) {
-  if (circBuffer.room() > length) { // If we get -1 here it means nothing could be read from the stream
-    if (length > 0) { // Add them to the circular buffer
-      circBuffer.write((char *)data, length); // length seems to be 4096 every time
+  if (circBuffer.room() > length) {
+    if (length > 0) {
+      circBuffer.write((char *)data, length);
     }
   } else {
     Serial.println("\nNothing to read from the stream");
-  }  
+  }
 }

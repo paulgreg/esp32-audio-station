@@ -23,6 +23,13 @@
 #include "WebRadios.h"
 #include "network.h"
 
+#define STARTUP_DELAY_MS 3000
+#define BT_START_DELAY_MS 100
+#define MODE_SWITCH_DELAY_MS 250
+#define ERROR_DISPLAY_DELAY_MS 10000
+#define EOF_RESTART_DELAY_MS 1000
+#define STREAM_LOOP_DELAY_MS 5
+
 Preferences preferences;
 ESP32_VS1053_Stream stream;
 
@@ -41,23 +48,26 @@ bool volumeSaved = true;
 bool mute = false;
 bool eof = false;
 bool paused = false;
+bool pendingRestart = false;
 
 bool bluetoothMode = true;
 
-boolean fetchWebRadiosData() {
-  boolean success = false;
-  while(!success) {
+bool fetchWebRadiosData() {
+  for (int retry = 0; retry < MAX_RETRY; retry++) {
     delay(RETRIES_DELAY);
-    success = getWebRadiosJSON(&webRadios);
+    if (getWebRadiosJSON(&webRadios)) {
+      return true;
+    }
+    Serial.printf("fetchWebRadiosData: retry %d/%d failed\n", retry + 1, MAX_RETRY);
   }
-  return success;
+  return false;
 }
 
 void setup() {
   titleLabel[0] = songLabel[0] ='\0';
   circBuffer.flush();
 
-  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);  
+  IrReceiver.begin(IR_RECEIVE_PIN, ENABLE_LED_FEEDBACK);
 
   preferences.begin("webradio", false);
   radioIdx = preferences.getInt("radioIdx", radioIdx);
@@ -70,11 +80,11 @@ void setup() {
   setupScreen();
   displayText(bluetoothMode ? BLUETOOTH_NAME : "Web Radio");
 
-  delay(3000); // Wait for VS1053 and PAM8403 to power up
+  delay(STARTUP_DELAY_MS); // Wait for VS1053 and PAM8403 to power up
   SPI.setHwCs(true);
   SPI.begin(SPI_CLK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);  /* start SPI before starting decoder */
 
-  if (!stream.startDecoder(VS1053_CS, VS1053_DCS, VS1053_DREQ) || !stream.isChipConnected()) { 
+  if (!stream.startDecoder(VS1053_CS, VS1053_DCS, VS1053_DREQ) || !stream.isChipConnected()) {
     Serial.println("Decoder not running");
     while (1) delay(1000);
   }
@@ -84,18 +94,18 @@ void setup() {
   stream.setEofCB(audio_eof_stream);
 
   if (bluetoothMode) {
-    copyString(BLUETOOTH_NAME, titleLabel);
+    copyString(BLUETOOTH_NAME, titleLabel, sizeof(titleLabel));
     a2dp_sink.set_stream_reader(read_data_stream, false);
     a2dp_sink.set_avrc_metadata_callback(avrc_metadata_callback);
     a2dp_sink.start(BLUETOOTH_NAME);
-    delay(100);
+    delay(BT_START_DELAY_MS);
     circBuffer.write((char *)bt_wav_header, 44);
-    delay(100);
+    delay(BT_START_DELAY_MS);
   } else {
     displayText("Radio > Wifi");
     if (!connectToWifi()) {
       displayError("Wifi error");
-      delay(10000);
+      delay(ERROR_DISPLAY_DELAY_MS);
       toggleSource();
     } else {
       displayText("Radio > list");
@@ -104,7 +114,7 @@ void setup() {
         startRadio();
       } else {
         displayError("Radio : error");
-        delay(10000);
+        delay(ERROR_DISPLAY_DELAY_MS);
         toggleSource();
       }
     }
@@ -119,11 +129,17 @@ void loop() {
       f_bluetoothsink_metadata_received = false;
     }
   } else {
-    if (stream.isRunning()) {
-      stream.loop();
-      delay(5);
+    if (pendingRestart) {
+      pendingRestart = false;
+      delay(EOF_RESTART_DELAY_MS);
+      restartRadio();
+    } else {
+      if (stream.isRunning()) {
+        stream.loop();
+        delay(STREAM_LOOP_DELAY_MS);
+      }
+      changeRadio();
     }
-    changeRadio();
   }
   savePreferences();
   handleIRCommands();
@@ -162,7 +178,7 @@ void handleIRCommands() {
             changeRadioIndex(false);
           }
           break;
-        case IR_VOL_UP: 
+        case IR_VOL_UP:
           changeVolume(true);
           break;
         case IR_VOL_DOWN:
@@ -174,7 +190,7 @@ void handleIRCommands() {
         case IR_VOL_SOURCE:
           toggleSource();
           break;
-        default:	
+        default:
           Serial.println("IRCommand: unknown");
       }
     }
@@ -184,17 +200,17 @@ void handleIRCommands() {
 
 void startRadio() {
   Serial.printf("StartRadio %s - %s\n", webRadios.url[radioIdx], webRadios.name[radioIdx]);
-  copyString(webRadios.name[radioIdx], titleLabel);
-  copyString("", songLabel);
+  copyString(webRadios.name[radioIdx], titleLabel, sizeof(titleLabel));
+  copyString("", songLabel, sizeof(songLabel));
   eof = false;
   refreshDisplay();
   stream.connectToHost(webRadios.url[radioIdx]);
-  // Serial.printf("codec: %s - bitrate: %lu kbps\n", stream.currentCodec(), stream.bitrate());
 }
 
 void restartRadio() {
   Serial.printf("RestartRadio %s - %s\n", webRadios.url[radioIdx], webRadios.name[radioIdx]);
   eof = false;
+  refreshDisplay();
   stream.connectToHost(webRadios.url[radioIdx]);
 }
 
@@ -202,14 +218,14 @@ void changeRadioIndex(bool next) {
   if (stream.isRunning()) stream.stopSong();
   if (next) radioIdx = radioIdx < webRadios.max - 1 ? radioIdx + 1 : 0;
   else radioIdx = radioIdx > 0 ? radioIdx - 1 : webRadios.max - 1;
-  copyString(webRadios.name[radioIdx], titleLabel);
-  copyString("", songLabel);
+  copyString(webRadios.name[radioIdx], titleLabel, sizeof(titleLabel));
+  copyString("", songLabel, sizeof(songLabel));
   refreshDisplay();
   hasRadioIdxChanged = true;
 }
 
 void toggleMute() {
-  mute = stream.getVolume() == volume;
+  mute = !mute;
   unsigned int v = mute ? 0 : volume;
   stream.setVolume(v);
   refreshDisplay();
@@ -223,12 +239,9 @@ void toggleSource() {
   } else {
     stream.stopSong();
   }
-  if (!volumeSaved) {
-    Serial.printf("!!! Save volume %i\n", volume);
-    preferences.putInt("volume", volume);
-  }
+  preferences.putInt("volume", volume);
   preferences.putBool("bluetoothMode", !bluetoothMode);
-  delay(250);
+  delay(MODE_SWITCH_DELAY_MS);
   ESP.restart();
 }
 
@@ -256,14 +269,14 @@ void audio_showstation(const char* station) {
   char* aac = strstr(station, ".aac");
   char* mp3 = strstr(station, ".mp3");
   if (aac == NULL && mp3 == NULL) {
-    copyString(station, titleLabel);
+    copyString(station, titleLabel, sizeof(titleLabel));
     refreshDisplay();
   }
 }
 
 void audio_showstreamtitle(const char* song) {
   Serial.printf("streamtitle: %s\n", song);
-  copyString(song, songLabel);
+  copyString(song, songLabel, sizeof(songLabel));
   refreshDisplay();
 }
 
@@ -271,8 +284,7 @@ void audio_eof_stream(const char* error) {
   Serial.printf("End of stream: %s\n", error);
   eof = true;
   refreshDisplay();
-  delay(1000);
-  restartRadio();
+  pendingRestart = true;
 }
 
 void refreshDisplay() {
@@ -288,18 +300,12 @@ void savePreferences() {
     if (stream.isRunning() && !radioIdxSaved) {
       Serial.println("should save radio index");
       radioIdxSaved = true;
-      if (!preferences.isKey("radioIdx") || preferences.getInt("radioIdx", radioIdx) != radioIdx) {
-        Serial.printf("!!! Save radio index %i\n", radioIdx);
-        preferences.putInt("radioIdx", radioIdx);
-      }
+      preferences.putInt("radioIdx", radioIdx);
     }
-     if (!volumeSaved) {
+    if (!volumeSaved) {
       Serial.println("should save volume");
       volumeSaved = true;
-      if (!preferences.isKey("volume") || preferences.getInt("volume", volume) != volume) {
-        Serial.printf("!!! Save volume %i\n", volume);
-        preferences.putInt("volume", volume);
-      }
+      preferences.putInt("volume", volume);
     }
   }
 }
